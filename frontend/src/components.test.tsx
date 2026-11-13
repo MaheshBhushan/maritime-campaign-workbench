@@ -86,7 +86,7 @@ describe("Gantt", () => {
 describe("SparqlConsole", () => {
   it("runs the query and renders the result table", async () => {
     const user = userEvent.setup();
-    const run = vi.fn(async () => ({
+    const run = vi.fn(async (_query: string) => ({
       head: { vars: ["vessel", "task"] },
       results: { bindings: [{ vessel: { type: "literal", value: "MV A" }, task: { type: "literal", value: "Tow" } }] },
     }));

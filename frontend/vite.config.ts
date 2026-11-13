@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: { "/api": process.env.MCW_API_URL ?? "http://localhost:18481" },
+    proxy: { "/api": "http://localhost:18481" },
   },
   test: {
     environment: "jsdom",
