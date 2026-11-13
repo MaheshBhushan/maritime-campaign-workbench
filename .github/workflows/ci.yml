@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mcw
+          POSTGRES_PASSWORD: mcw
+          POSTGRES_DB: mcw
+        ports: ["18482:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mcw" --health-interval 5s --health-retries 20
+      minio:
+        image: bitnamilegacy/minio:2025.4.22
+        env:
+          MINIO_ROOT_USER: mcwminio
+          MINIO_ROOT_PASSWORD: mcwminio-secret
+        ports: ["18483:9000"]
+        options: >-
+          --health-cmd "curl -fs http://localhost:9000/minio/health/live" --health-interval 5s --health-retries 20
+      opensearch:
+        image: opensearchproject/opensearch:2.19.2
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          DISABLE_INSTALL_DEMO_CONFIG: "true"
+          # dev/CI only: do not block index creation on nearly full developer disks
+          cluster.routing.allocation.disk.threshold_enabled: "false"
+          OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+        ports: ["18485:9200"]
+        options: >-
+          --health-cmd "curl -fs http://localhost:9200/_cluster/health" --health-interval 10s --health-retries 30
+      fuseki:
+        image: stain/jena-fuseki:5.1.0
+        env:
+          ADMIN_PASSWORD: mcw-fuseki
+          JVM_ARGS: -Xmx256m
+        ports: ["18486:3030"]
+    env:
+      MCW_INTEGRATION: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: Wait for Fuseki
+        run: |
+          for i in $(seq 1 60); do curl -fs http://localhost:18486/\$/ping && exit 0; sleep 2; done; exit 1
+      - name: pytest (unit + integration against service containers)
+        run: uv run pytest -v
+      - name: Cross-service fixture check
+        run: uv run mcw-fixture-check
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose up
+        run: docker compose up -d --build --wait --wait-timeout 600
+      - name: Main flow through the UI proxy
+        run: ./scripts/smoke.sh http://localhost:18480
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+      - run: docker compose down -v
+        if: always()

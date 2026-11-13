@@ -1,0 +1,126 @@
+@prefix mcw:  <https://github.com/MaheshBhushan/maritime-campaign-workbench/ontology#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# Maritime Campaign Workbench ontology.
+# Describes synthetic planning data only; it models no real programme.
+
+<https://github.com/MaheshBhushan/maritime-campaign-workbench/ontology>
+    a owl:Ontology ;
+    rdfs:label "Maritime Campaign Workbench ontology" ;
+    rdfs:comment "Small vocabulary for synthetic maritime campaign plans: campaigns, vessels, tasks, scheduled activities and documents." ;
+    owl:versionInfo "1.0.0" .
+
+# Classes
+
+mcw:CampaignEntity a owl:Class ;
+    rdfs:label "Campaign entity" ;
+    rdfs:comment "Anything that belongs to exactly one campaign." .
+
+mcw:Campaign a owl:Class ;
+    rdfs:label "Campaign" ;
+    rdfs:comment "A synthetic maritime campaign: an objective, a start time and the vessels and tasks that serve it." .
+
+mcw:Vessel a owl:Class ;
+    rdfs:subClassOf mcw:CampaignEntity ;
+    rdfs:label "Vessel" .
+
+mcw:Task a owl:Class ;
+    rdfs:subClassOf mcw:CampaignEntity ;
+    rdfs:label "Task" ;
+    rdfs:comment "A unit of work with a duration, performed by one vessel, possibly after other tasks." .
+
+mcw:ScheduledActivity a owl:Class ;
+    rdfs:subClassOf mcw:CampaignEntity ;
+    rdfs:label "Scheduled activity" ;
+    rdfs:comment "A task placed on the timeline by the planner." .
+
+mcw:Document a owl:Class ;
+    rdfs:subClassOf mcw:CampaignEntity ;
+    rdfs:label "Document" ;
+    rdfs:comment "A file attached to a campaign; its bytes live in object storage." .
+
+# Object properties
+
+mcw:inCampaign a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "in campaign" ;
+    rdfs:domain mcw:CampaignEntity ;
+    rdfs:range mcw:Campaign .
+
+mcw:assignedVessel a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "assigned vessel" ;
+    rdfs:domain mcw:Task ;
+    rdfs:range mcw:Vessel .
+
+mcw:dependsOn a owl:ObjectProperty, owl:TransitiveProperty ;
+    rdfs:label "depends on" ;
+    rdfs:comment "The subject task may start only after the object task has finished." ;
+    rdfs:domain mcw:Task ;
+    rdfs:range mcw:Task .
+
+mcw:schedulesTask a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "schedules task" ;
+    rdfs:domain mcw:ScheduledActivity ;
+    rdfs:range mcw:Task .
+
+mcw:onVessel a owl:ObjectProperty, owl:FunctionalProperty ;
+    rdfs:label "on vessel" ;
+    rdfs:domain mcw:ScheduledActivity ;
+    rdfs:range mcw:Vessel .
+
+# Datatype properties
+
+mcw:isSynthetic a owl:DatatypeProperty ;
+    rdfs:label "is synthetic" ;
+    rdfs:domain mcw:Campaign ;
+    rdfs:range xsd:boolean .
+
+mcw:objective a owl:DatatypeProperty ;
+    rdfs:domain mcw:Campaign ;
+    rdfs:range xsd:string .
+
+mcw:startTime a owl:DatatypeProperty ;
+    rdfs:range xsd:dateTime .
+
+mcw:endTime a owl:DatatypeProperty ;
+    rdfs:range xsd:dateTime .
+
+mcw:vesselClass a owl:DatatypeProperty ;
+    rdfs:domain mcw:Vessel ;
+    rdfs:range xsd:string .
+
+mcw:homePort a owl:DatatypeProperty ;
+    rdfs:domain mcw:Vessel ;
+    rdfs:range xsd:string .
+
+mcw:turnaroundHours a owl:DatatypeProperty ;
+    rdfs:comment "Minimum idle gap the vessel needs between consecutive tasks." ;
+    rdfs:domain mcw:Vessel ;
+    rdfs:range xsd:decimal .
+
+mcw:taskKind a owl:DatatypeProperty ;
+    rdfs:domain mcw:Task ;
+    rdfs:range xsd:string .
+
+mcw:durationHours a owl:DatatypeProperty ;
+    rdfs:domain mcw:Task ;
+    rdfs:range xsd:decimal .
+
+mcw:contentType a owl:DatatypeProperty ;
+    rdfs:domain mcw:Document ;
+    rdfs:range xsd:string .
+
+mcw:sizeBytes a owl:DatatypeProperty ;
+    rdfs:domain mcw:Document ;
+    rdfs:range xsd:integer .
+
+mcw:sha256 a owl:DatatypeProperty ;
+    rdfs:domain mcw:Document ;
+    rdfs:range xsd:string .
+
+mcw:objectKey a owl:DatatypeProperty ;
+    rdfs:comment "Key of the document object in the MinIO bucket." ;
+    rdfs:domain mcw:Document ;
+    rdfs:range xsd:string .

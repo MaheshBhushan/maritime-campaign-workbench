@@ -1,0 +1,22 @@
+{
+  "name": "SYNTHETIC Fixture Campaign Harbour Survey Alpha",
+  "objective": "Synthetic test data. Survey a fictional approach channel, lay three fictional sensor buoys and recover a test mooring. All names, ports and vessels are invented.",
+  "start_time": "2026-03-02T06:00:00+00:00",
+  "vessels": [
+    {"key": "survey", "name": "MV Fictional Surveyor", "vessel_class": "survey", "home_port": "Port Example North", "turnaround_hours": 2},
+    {"key": "tender", "name": "MV Placeholder Tender", "vessel_class": "buoy tender", "home_port": "Port Example North", "turnaround_hours": 1},
+    {"key": "tug", "name": "MV Sample Tug", "vessel_class": "tug", "home_port": "Port Example South", "turnaround_hours": 0.5}
+  ],
+  "tasks": [
+    {"key": "transit", "name": "Transit to survey area", "kind": "transit", "duration_hours": 4, "vessel": "survey"},
+    {"key": "survey", "name": "Multibeam channel survey", "kind": "survey", "duration_hours": 10, "vessel": "survey", "depends_on": ["transit"]},
+    {"key": "load", "name": "Load buoys at port", "kind": "logistics", "duration_hours": 3, "vessel": "tender"},
+    {"key": "lay", "name": "Lay three sensor buoys", "kind": "deployment", "duration_hours": 6, "vessel": "tender", "depends_on": ["load", "survey"]},
+    {"key": "recover", "name": "Recover test mooring", "kind": "recovery", "duration_hours": 5, "vessel": "tug"},
+    {"key": "verify", "name": "Verify buoy positions", "kind": "survey", "duration_hours": 3, "vessel": "survey", "depends_on": ["lay"]}
+  ],
+  "documents": [
+    {"file": "survey-brief.md", "title": "Synthetic survey brief", "content_type": "text/markdown", "tags": ["brief", "survey"]},
+    {"file": "buoy-positions.csv", "title": "Synthetic buoy positions", "content_type": "text/csv", "tags": ["positions"]}
+  ]
+}

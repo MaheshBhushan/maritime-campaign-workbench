@@ -1,0 +1,102 @@
+name: maritime-campaign-workbench
+
+# Host ports are bound to 127.0.0.1 and chosen to avoid common defaults.
+# Memory limits keep the whole stack under roughly 2.5 GB.
+
+x-mcw-env: &mcw-env
+  MCW_DATABASE_URL: postgresql+psycopg://mcw:mcw@postgres:5432/mcw
+  MCW_MINIO_ENDPOINT: minio:9000
+  MCW_MINIO_ACCESS_KEY: mcwminio
+  MCW_MINIO_SECRET_KEY: mcwminio-secret
+  MCW_OPENSEARCH_URL: http://opensearch:9200
+  MCW_FUSEKI_URL: http://fuseki:3030
+  MCW_FUSEKI_PASSWORD: mcw-fuseki
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mcw
+      POSTGRES_PASSWORD: mcw
+      POSTGRES_DB: mcw
+    ports: ["127.0.0.1:18482:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcw"]
+      interval: 5s
+      retries: 20
+
+  minio:
+    image: bitnamilegacy/minio:2025.4.22
+    environment:
+      MINIO_ROOT_USER: mcwminio
+      MINIO_ROOT_PASSWORD: mcwminio-secret
+    ports: ["127.0.0.1:18483:9000", "127.0.0.1:18484:9001"]
+    volumes: [miniodata:/bitnami/minio/data]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/minio/health/live"]
+      interval: 5s
+      retries: 20
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.2
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      # dev/CI only: do not block index creation on nearly full developer disks
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["127.0.0.1:18485:9200"]
+    volumes: [osdata:/usr/share/opensearch/data]
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health"]
+      interval: 10s
+      retries: 30
+
+  fuseki:
+    image: stain/jena-fuseki:5.1.0
+    environment:
+      ADMIN_PASSWORD: mcw-fuseki
+      JVM_ARGS: -Xmx256m
+    ports: ["127.0.0.1:18486:3030"]
+    volumes: [fusekidata:/fuseki]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3030/$$/ping || curl -fs http://localhost:3030/$$/ping"]
+      interval: 5s
+      retries: 30
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: *mcw-env
+    ports: ["127.0.0.1:18481:8000"]
+    mem_limit: 384m
+    depends_on:
+      postgres: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      opensearch: {condition: service_healthy}
+      fuseki: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
+      interval: 5s
+      retries: 30
+
+  ui:
+    build:
+      context: frontend
+    ports: ["127.0.0.1:18480:80"]
+    mem_limit: 64m
+    depends_on:
+      api: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  miniodata:
+  osdata:
+  fusekidata:
