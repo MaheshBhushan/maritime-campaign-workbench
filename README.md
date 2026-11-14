@@ -143,7 +143,8 @@ correctness results, not performance benchmarks.
 
 - Backend pytest: 23 unit tests pass without services (4 integration tests skipped); with
   `MCW_INTEGRATION=1` against the compose services all 27 pass, locally and in CI.
-- Frontend Vitest: 14 tests in 2 files pass in CI; `tsc --noEmit` reports no errors.
+- Frontend Vitest: 14 tests in 2 files pass, locally and in CI; `tsc --noEmit` reports no
+  errors.
 - `mcw-fixture-check` on the fixture campaign: 21/21 checks pass (Postgres 7, MinIO 3,
   OpenSearch 5, Fuseki 6), locally and in CI. Fuseki reports 3 vessels, 6 tasks,
   6 scheduled activities and 2 documents for it.
